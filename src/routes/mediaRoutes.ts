@@ -3,7 +3,7 @@ import {
   getMediaById,
   getTrendingMedia,
   getMediaReviews,
-} from '../mediaControllers/mediaControllers.js';
+} from '../controllers/mediaControllers.js';
 
 const router = Router();
 

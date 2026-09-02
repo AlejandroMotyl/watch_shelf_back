@@ -1,9 +1,9 @@
 import axios from 'axios';
 import type { Request, Response } from 'express';
 import createHttpError from 'http-errors';
-import type { ApiResponse, MovieId, TVId } from '../types/media.ts';
-import type { MediaCredits, MediaStaff } from '../types/staff.ts';
-import type { ReviewsResponse } from '../types/reviews.ts';
+import type { ApiResponse, MovieId, TVId } from '../types/media.js';
+import type { MediaCredits, MediaStaff } from '../types/staff.js';
+import type { ReviewsResponse } from '../types/reviews.js';
 
 export const tmdb = axios.create({
   baseURL: 'https://api.themoviedb.org/3',
