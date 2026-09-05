@@ -6,6 +6,7 @@ import { notFoundHandler } from './middleware/notFoundHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import { errors } from 'celebrate';
 import cookieParser from 'cookie-parser';
 const app = express();
@@ -21,6 +22,7 @@ app.use(cookieParser());
 // ? Code
 app.use(authRoutes);
 app.use(mediaRoutes);
+app.use(userRoutes);
 
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'hello' });

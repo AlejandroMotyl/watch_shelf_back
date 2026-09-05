@@ -1,7 +1,7 @@
 import { HttpError } from 'http-errors';
 import type { ErrorRequestHandler } from 'express';
 
-export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+export const errorHandler: ErrorRequestHandler = (err, req, res) => {
   console.error(err);
 
   const isProd = process.env.NODE_ENV === 'production';
