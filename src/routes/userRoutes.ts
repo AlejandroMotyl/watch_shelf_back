@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate.js';
 import {
   getCurrentUser,
+  updatePassword,
   updateUserAvatar,
+  updateUsername,
 } from '../controllers/userController.js';
 import { upload } from '../middleware/multer.js';
 
@@ -15,6 +17,8 @@ router.patch(
   upload.single('avatar'),
   updateUserAvatar,
 );
+router.patch('/profile/username', authenticate, updateUsername);
+router.patch('/profile/password', authenticate, updatePassword);
 // router.get('/profile/reviews');
 // router.get('/profile/favorites');
 // router.get('/profile/history');
