@@ -21,8 +21,8 @@ app.use(cookieParser());
 
 // ? Code
 app.use(authRoutes);
-app.use(mediaRoutes);
 app.use(userRoutes);
+app.use(mediaRoutes);
 
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'hello' });

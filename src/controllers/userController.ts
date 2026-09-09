@@ -4,6 +4,7 @@ import { saveFileToCloudinary } from '../utils/saveFileToCloudinary.js';
 import { pool } from '../config/db.js';
 import type { UploadApiResponse } from 'cloudinary';
 import argon2 from 'argon2';
+import { tmdb } from './mediaControllers.js';
 
 export const getCurrentUser = async (
   req: Request,
@@ -134,6 +135,144 @@ export const updatePassword = async (
     });
   } catch (err) {
     console.error('updatePassword failed:', err);
+    next(err instanceof Error ? err : new Error(JSON.stringify(err)));
+  }
+};
+
+// ? FAVORITES
+export const getFavorites = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (!req.user) {
+    throw createHttpError(401, 'Unauthorized');
+  }
+
+  try {
+    const favoritesData = await pool.query(
+      `
+        SELECT
+          id,
+          tmdb_id,
+          media_type,
+          title,
+          poster_path,
+          release_date,
+          genres,
+          created_at
+        FROM favorites
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+      `,
+      [req.user.id],
+    );
+
+    res.status(200).json({
+      favorites: favoritesData.rows,
+    });
+  } catch (err) {
+    console.error('Fetching favorites failed:', err);
+    next(err instanceof Error ? err : new Error(JSON.stringify(err)));
+  }
+};
+
+export const addFavorite = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (!req.user) {
+    throw createHttpError(401, 'Unauthorized');
+  }
+
+  try {
+    const { id, type } = req.body;
+
+    const endpoint = type === 'movie' ? `/movie/${id}` : `/tv/${id}`;
+
+    const { data } = await tmdb.get(endpoint);
+
+    const genres = data.genres?.map((genre: { id: number }) => genre.id) ?? [];
+
+    const title = data.title ?? data.name;
+    const releaseDate = data.release_date ?? data.first_air_date ?? null;
+
+    const favoriteData = await pool.query(
+      `
+        INSERT INTO favorites (
+          user_id,
+          tmdb_id,
+          media_type,
+          title,
+          poster_path,
+          release_date,
+          genres
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING
+          id,
+          tmdb_id,
+          media_type,
+          title,
+          poster_path,
+          release_date,
+          genres,
+          created_at
+      `,
+      [req.user.id, id, type, title, data.poster_path, releaseDate, genres],
+    );
+
+    res.status(201).json({
+      favorite: favoriteData.rows[0],
+    });
+  } catch (err) {
+    if (
+      err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      err.code === '23505'
+    ) {
+      next(createHttpError(409, 'Movie is already in favorites'));
+      return;
+    }
+
+    console.error('Adding favorite failed:', err);
+
+    next(err instanceof Error ? err : new Error(JSON.stringify(err)));
+  }
+};
+
+export const removeFavorite = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (!req.user) {
+    throw createHttpError(401, 'Unauthorized');
+  }
+
+  try {
+    const { type, id } = req.params;
+
+    const favoriteData = await pool.query(
+      `
+        DELETE FROM favorites
+        WHERE user_id = $1
+          AND media_type = $2
+          AND tmdb_id = $3
+        RETURNING id
+      `,
+      [req.user.id, type, id],
+    );
+
+    if (favoriteData.rowCount === 0) {
+      throw createHttpError(404, 'Favorite not found');
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    console.error('Removing favorite failed:', err);
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
 };
