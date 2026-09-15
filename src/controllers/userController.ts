@@ -346,7 +346,10 @@ export const getWatchHistory = async (
 
   try {
     const page = Math.max(Number(req.query.page) || 1, 1);
-    const limit = 20;
+
+    const requestedLimit = Number(req.query.limit) || 12;
+
+    const limit = Math.min(Math.max(requestedLimit, 1), 50);
     const offset = (page - 1) * limit;
 
     const historyData = await pool.query(
@@ -403,60 +406,35 @@ export const addWatchHistory = async (
   if (!req.user) {
     throw createHttpError(401, 'Unauthorized');
   }
-
   try {
-    const { tmdbId, type } = req.body;
-
-    if (!Number.isInteger(tmdbId) || !['movie', 'tv'].includes(type)) {
-      throw createHttpError(400, 'Invalid media');
+    const {
+      tmdbId,
+      type,
+      progressSeconds = 0,
+      durationSeconds = null,
+    } = req.body;
+    if (
+      !Number.isInteger(tmdbId) ||
+      !['movie', 'tv'].includes(type) ||
+      !Number.isFinite(progressSeconds) ||
+      progressSeconds < 0 ||
+      (durationSeconds !== null &&
+        (!Number.isFinite(durationSeconds) || durationSeconds <= 0))
+    ) {
+      throw createHttpError(400, 'Invalid watch history data');
     }
-
     const endpoint = type === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`;
-
     const { data } = await tmdb.get(endpoint);
-
     const title = data.title ?? data.name;
     const releaseDate = data.release_date ?? data.first_air_date ?? null;
-
     const genres = data.genres?.map((genre: { id: number }) => genre.id) ?? [];
-
-    const durationSeconds =
-      type === 'movie' && data.runtime ? data.runtime * 60 : null;
-
     const historyData = await pool.query(
       `
-        INSERT INTO watch_history (
-          user_id,
-          tmdb_id,
-          media_type,
-          title,
-          poster_path,
-          release_date,
-          genres,
-          duration_seconds,
-          watched_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-        ON CONFLICT (user_id, tmdb_id, media_type)
-        DO UPDATE SET
-          title = EXCLUDED.title,
-          poster_path = EXCLUDED.poster_path,
-          release_date = EXCLUDED.release_date,
-          genres = EXCLUDED.genres,
-          duration_seconds = EXCLUDED.duration_seconds,
-          watched_at = NOW()
-        RETURNING
-          id,
-          tmdb_id,
-          media_type,
-          title,
-          poster_path,
-          release_date,
-          genres,
-          progress_seconds,
-          duration_seconds,
-          watched_at
-      `,
+      INSERT INTO watch_history ( user_id, tmdb_id, media_type, title, poster_path, release_date, genres, progress_seconds, duration_seconds, watched_at )
+       VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW() )
+       ON CONFLICT (user_id, tmdb_id, media_type)
+       DO UPDATE SET title = EXCLUDED.title, poster_path = EXCLUDED.poster_path, release_date = EXCLUDED.release_date, genres = EXCLUDED.genres, progress_seconds = EXCLUDED.progress_seconds, duration_seconds = EXCLUDED.duration_seconds, watched_at = NOW()
+       RETURNING id, tmdb_id, media_type, title, poster_path, release_date, genres, progress_seconds, duration_seconds, watched_at `,
       [
         req.user.id,
         tmdbId,
@@ -465,13 +443,11 @@ export const addWatchHistory = async (
         data.poster_path,
         releaseDate,
         genres,
+        progressSeconds,
         durationSeconds,
       ],
     );
-
-    res.status(200).json({
-      history: historyData.rows[0],
-    });
+    res.status(200).json({ history: historyData.rows[0] });
   } catch (err) {
     console.error('Saving watch history failed:', err);
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));

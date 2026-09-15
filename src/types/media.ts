@@ -97,3 +97,12 @@ export type SpokenLanguage = {
   iso_639_1: string;
   name: string;
 };
+
+export type TMDBVideo = {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+  official: boolean;
+};
