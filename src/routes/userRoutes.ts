@@ -12,6 +12,7 @@ import {
   saveRating,
   getWatchHistory,
   addWatchHistory,
+  getWatchHistoryItem,
 } from '../controllers/userController.js';
 import { upload } from '../middleware/multer.js';
 
@@ -38,5 +39,6 @@ router.get('/profile/ratings/:type/:id', authenticate, getRating);
 // router.get('/profile/reviews');
 
 router.get('/profile/history', authenticate, getWatchHistory);
+router.get('/profile/history/:type/:id', authenticate, getWatchHistoryItem);
 router.post('/profile/history', authenticate, addWatchHistory);
 export default router;

@@ -398,6 +398,49 @@ export const getWatchHistory = async (
   }
 };
 
+export const getWatchHistoryItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (!req.user) {
+    throw createHttpError(401, 'Unauthorized');
+  }
+
+  try {
+    const { type, id } = req.params;
+
+    const historyData = await pool.query(
+      `
+        SELECT
+          id,
+          tmdb_id,
+          media_type,
+          title,
+          poster_path,
+          release_date,
+          genres,
+          progress_seconds,
+          duration_seconds,
+          watched_at
+        FROM watch_history
+        WHERE user_id = $1
+          AND tmdb_id = $2
+          AND media_type = $3
+      `,
+      [req.user.id, id, type],
+    );
+
+    res.status(200).json({
+      history: historyData.rows[0] ?? null,
+    });
+  } catch (err) {
+    console.error('Fetching watch history item failed:', err);
+
+    next(err instanceof Error ? err : new Error(JSON.stringify(err)));
+  }
+};
+
 export const addWatchHistory = async (
   req: Request,
   res: Response,

@@ -104,5 +104,5 @@ export type TMDBVideo = {
   name: string;
   site: string;
   type: string;
-  official: boolean;
+  official?: boolean;
 };
