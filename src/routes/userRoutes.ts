@@ -13,6 +13,9 @@ import {
   getWatchHistory,
   addWatchHistory,
   getWatchHistoryItem,
+  getReview,
+  saveReview,
+  getReviews,
 } from '../controllers/userController.js';
 import { upload } from '../middleware/multer.js';
 
@@ -36,7 +39,9 @@ router.delete('/profile/favorites/:type/:id', authenticate, removeFavorite);
 router.post('/profile/ratings', authenticate, saveRating);
 router.get('/profile/ratings/:type/:id', authenticate, getRating);
 
-// router.get('/profile/reviews');
+router.get('/profile/reviews/:type/:id', authenticate, getReview);
+router.get('/profile/reviews', authenticate, getReviews);
+router.post('/profile/reviews', authenticate, saveReview);
 
 router.get('/profile/history', authenticate, getWatchHistory);
 router.get('/profile/history/:type/:id', authenticate, getWatchHistoryItem);
