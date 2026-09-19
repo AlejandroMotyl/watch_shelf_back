@@ -617,6 +617,10 @@ export const getReviews = async (
           tmdb_id,
           media_type,
           review_content,
+          title,
+          poster_path,
+          release_date,
+          genres,
           created_at,
           updated_at
         FROM reviews
