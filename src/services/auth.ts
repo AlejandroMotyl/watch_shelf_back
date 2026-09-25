@@ -2,23 +2,27 @@ import type { Response } from 'express';
 import { pool } from '../config/db.js';
 import { ONE_DAY, FIFTEEN_MINUTES } from '../constants/time.js';
 import type { Session } from '../types/session.js';
+import type { Pool, PoolClient } from 'pg';
 
-export const createSession = async (userId: number): Promise<Session> => {
+export const createSession = async (
+  userId: number,
+  client: PoolClient | Pool = pool,
+): Promise<Session> => {
   const accessToken = crypto.randomUUID();
   const refreshToken = crypto.randomUUID();
 
-  const session = await pool.query(
+  const session = await client.query(
     `
-INSERT INTO sessions (
-  user_id,
-  access_token,
-  refresh_token,
-  access_token_valid_until,
-  refresh_token_valid_until
-)
-    VALUES ($1, $2, $3, $4, $5)
-    RETURNING *
-      `,
+      INSERT INTO sessions (
+        user_id,
+        access_token,
+        refresh_token,
+        access_token_valid_until,
+        refresh_token_valid_until
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `,
     [
       userId,
       accessToken,
@@ -27,6 +31,7 @@ INSERT INTO sessions (
       new Date(Date.now() + ONE_DAY),
     ],
   );
+
   return session.rows[0];
 };
 

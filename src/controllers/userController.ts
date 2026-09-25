@@ -5,6 +5,7 @@ import { pool } from '../config/db.js';
 import type { UploadApiResponse } from 'cloudinary';
 import argon2 from 'argon2';
 import { tmdb } from './mediaControllers.js';
+import { createSession, setSessionCookies } from '../services/auth.js';
 
 export const getCurrentUser = async (
   req: Request,
@@ -97,7 +98,7 @@ export const updatePassword = async (
 
     const userPasswordData = await pool.query(
       `
-        SELECT password_hash
+        SELECT id, password_hash
         FROM users
         WHERE id = $1
       `,
@@ -129,6 +130,16 @@ export const updatePassword = async (
       `,
       [newPasswordHash, req.user.id],
     );
+
+    await pool.query(
+      `
+      DELETE FROM sessions
+      WHERE user_id = $1
+    `,
+      [user.id],
+    );
+    const newSession = await createSession(user.id);
+    setSessionCookies(res, newSession);
 
     res.status(200).json({
       message: 'Password updated successfully',
