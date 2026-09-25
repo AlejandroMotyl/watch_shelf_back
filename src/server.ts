@@ -24,10 +24,6 @@ app.use(authRoutes);
 app.use(userRoutes);
 app.use(mediaRoutes);
 
-app.get('/', (req, res) => {
-  res.status(200).json({ message: 'hello' });
-});
-
 // ! error Middleware
 app.use(notFoundHandler);
 app.use(errors());

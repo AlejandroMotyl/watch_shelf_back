@@ -13,7 +13,13 @@ export default defineConfig([
     },
     rules: {
       semi: 'error',
-      'no-unused-vars': ['error', { args: 'none' }],
+      'no-unused-vars': [
+        'error',
+        {
+          args: 'after-used',
+          argsIgnorePattern: '^_',
+        },
+      ],
       'no-undef': 'error',
     },
   },
@@ -23,6 +29,13 @@ export default defineConfig([
     extends: [tseslint.configs.recommended],
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',
+
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+        },
+      ],
     },
   },
 ]);
