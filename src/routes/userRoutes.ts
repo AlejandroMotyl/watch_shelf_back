@@ -18,6 +18,11 @@ import {
   getReviews,
 } from '../controllers/userController.js';
 import { upload } from '../middleware/multer.js';
+import {
+  updatePasswordSchema,
+  updateUsernameSchema,
+} from '../validations/authValidation.js';
+import { celebrate } from 'celebrate';
 
 const router = Router();
 
@@ -29,8 +34,18 @@ router.patch(
   updateUserAvatar,
 );
 
-router.patch('/profile/username', authenticate, updateUsername);
-router.patch('/profile/password', authenticate, updatePassword);
+router.patch(
+  '/profile/username',
+  authenticate,
+  celebrate(updateUsernameSchema),
+  updateUsername,
+);
+router.patch(
+  '/profile/password',
+  authenticate,
+  celebrate(updatePasswordSchema),
+  updatePassword,
+);
 
 router.get('/profile/favorites', authenticate, getFavorites);
 router.post('/profile/favorites', authenticate, addFavorite);

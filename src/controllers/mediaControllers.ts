@@ -16,9 +16,6 @@ export const tmdb = axios.create({
 export const getTrendingMedia = async (req: Request, res: Response) => {
   const { type } = req.params;
   const { data } = await tmdb.get<ApiResponse>(`/trending/${type}/week`);
-  if (!data) {
-    throw createHttpError(404, 'Media not found');
-  }
   const results = data.results.map((media) => ({
     ...media,
     media_type: type,
@@ -36,9 +33,6 @@ export const getMediaById = async (req: Request, res: Response) => {
   const { data: creditsData } = await tmdb.get<MediaCredits>(
     `/${type}/${id}/credits`,
   );
-  if (!mediaData || !creditsData) {
-    throw createHttpError(404, 'Media not found');
-  }
   const media = { ...mediaData, media_type: type };
   const staff: MediaStaff = {
     directors: creditsData.crew.filter((person) => person.job === 'Director'),
@@ -55,51 +49,41 @@ export const getMediaById = async (req: Request, res: Response) => {
 export const getMediaTrailerById = async (req: Request, res: Response) => {
   const { id, type } = req.params;
 
-  try {
-    const endpoint = `/${type}/${id}/videos`;
+  const endpoint = `/${type}/${id}/videos`;
 
-    const { data } = await tmdb.get(endpoint, {
-      params: {
-        language: 'en-US',
-      },
-    });
+  const { data } = await tmdb.get(endpoint, {
+    params: {
+      language: 'en-US',
+    },
+  });
 
-    let videos: TMDBVideo[] = data.results ?? [];
+  let videos: TMDBVideo[] = data.results ?? [];
 
-    if (videos.length === 0) {
-      const fallbackResponse = await tmdb.get(endpoint);
+  if (videos.length === 0) {
+    const fallbackResponse = await tmdb.get(endpoint);
 
-      videos = fallbackResponse.data.results ?? [];
-    }
-
-    const youtubeVideos = videos.filter(
-      (video) => video.site === 'YouTube' && video.type === 'Trailer',
-    );
-
-    const trailer =
-      youtubeVideos.find((video) => video.official === true) ??
-      youtubeVideos.find((video) => video.official === false) ??
-      youtubeVideos[0];
-
-    if (!trailer) {
-      throw createHttpError(404, 'Trailer not found');
-    }
-
-    res.status(200).json({
-      trailer: {
-        key: trailer.key,
-        name: trailer.name,
-      },
-    });
-  } catch (error) {
-    console.error('Fetching trailer failed:', error);
-
-    if (error instanceof Error && 'status' in error) {
-      throw error;
-    }
-
-    throw createHttpError(502, 'Unable to fetch trailer');
+    videos = fallbackResponse.data.results ?? [];
   }
+
+  const youtubeVideos = videos.filter(
+    (video) => video.site === 'YouTube' && video.type === 'Trailer',
+  );
+
+  const trailer =
+    youtubeVideos.find((video) => video.official === true) ??
+    youtubeVideos.find((video) => video.official === false) ??
+    youtubeVideos[0];
+
+  if (!trailer) {
+    throw createHttpError(404, 'Trailer not found');
+  }
+
+  res.status(200).json({
+    trailer: {
+      key: trailer.key,
+      name: trailer.name,
+    },
+  });
 };
 
 export const getMediaReviews = async (req: Request, res: Response) => {

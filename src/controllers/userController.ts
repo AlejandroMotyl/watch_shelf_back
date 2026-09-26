@@ -1,11 +1,15 @@
 import type { NextFunction, Request, Response } from 'express';
 import createHttpError from 'http-errors';
-import { saveFileToCloudinary } from '../utils/saveFileToCloudinary.js';
+import {
+  deleteFileFromCloudinary,
+  saveFileToCloudinary,
+} from '../utils/saveFileToCloudinary.js';
 import { pool } from '../config/db.js';
-import type { UploadApiResponse } from 'cloudinary';
 import argon2 from 'argon2';
 import { tmdb } from './mediaControllers.js';
 import { createSession, setSessionCookies } from '../services/auth.js';
+import sharp from 'sharp';
+import { fileTypeFromBuffer } from 'file-type';
 
 export const getCurrentUser = async (
   req: Request,
@@ -32,32 +36,100 @@ export const updateUserAvatar = async (
   res: Response,
   next: NextFunction,
 ) => {
-  // ! Add clearing out the previous image from cloudinary
   try {
     if (!req.file) {
-      next(createHttpError(400, 'No file'));
-      return;
+      return next(createHttpError(400, 'No file uploaded'));
     }
 
-    const result = (await saveFileToCloudinary(
-      req.file.buffer,
-    )) as UploadApiResponse;
-    console.log('CLOUDINARY RESULT:', result);
+    const allowedTypes = new Set([
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ]);
+
+    const detectedType = await fileTypeFromBuffer(req.file.buffer);
+
+    if (!detectedType || !allowedTypes.has(detectedType.mime)) {
+      return next(
+        createHttpError(
+          400,
+          'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.',
+        ),
+      );
+    }
+
+    const image = sharp(req.file.buffer, {
+      limitInputPixels: 25_000_000,
+    });
+
+    const metadata = await image.metadata();
+
+    if (!metadata.width || !metadata.height) {
+      return next(createHttpError(400, 'Invalid image'));
+    }
+
+    if (metadata.width > 5000 || metadata.height > 5000) {
+      return next(createHttpError(400, 'Image dimensions are too large'));
+    }
+
+    const processedImage = await image
+      .rotate()
+      .resize(512, 512, {
+        fit: 'cover',
+      })
+      .webp({
+        quality: 85,
+      })
+      .toBuffer();
+
+    const oldAvatarResult = await pool.query(
+      `
+        SELECT avatar_public_id
+        FROM users
+        WHERE id = $1
+      `,
+      [req.user!.id],
+    );
+
+    const oldAvatarPublicId = oldAvatarResult.rows[0]?.avatar_public_id ?? null;
+
+    const result = await saveFileToCloudinary(processedImage);
 
     const userData = await pool.query(
       `
         UPDATE users
-        SET avatar_url = $1
-        WHERE id = $2
-        RETURNING id, username, email, avatar_url, created_at
+        SET
+          avatar_url = $1,
+          avatar_public_id = $2
+        WHERE id = $3
+        RETURNING
+          id,
+          username,
+          email,
+          avatar_url,
+          created_at
       `,
-      [result.secure_url, req.user!.id],
+      [result.secure_url, result.public_id, req.user!.id],
     );
 
-    res.status(200).json({ user: userData.rows[0] });
+    if (oldAvatarPublicId) {
+      try {
+        await deleteFileFromCloudinary(oldAvatarPublicId);
+      } catch (deleteError) {
+        console.error('Failed to delete previous avatar:', deleteError);
+      }
+    }
+
+    return res.status(200).json({
+      user: userData.rows[0],
+    });
   } catch (err) {
     console.error('updateUserAvatar failed:', err);
-    next(err instanceof Error ? err : new Error(JSON.stringify(err)));
+
+    return next(
+      err instanceof Error ? err : new Error('Failed to update avatar'),
+    );
   }
 };
 export const updateUsername = async (
