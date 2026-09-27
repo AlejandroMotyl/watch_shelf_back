@@ -8,10 +8,10 @@ import {
 
 const router = Router();
 
-router.get('/trending/:type', getTrendingMedia);
-router.get('/reviews/:type', getMediaReviews);
-router.get('/:type/:id/trailer', getMediaTrailerById);
+router.get('/trending/:media_type', getTrendingMedia);
+router.get('/reviews/:media_type', getMediaReviews);
+router.get('/:media_type/:tmdbId/trailer', getMediaTrailerById);
 
-router.get('/:type/:id', getMediaById);
+router.get('/:media_type/:tmdbId', getMediaById);
 
 export default router;

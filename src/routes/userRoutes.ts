@@ -5,17 +5,6 @@ import {
   updatePassword,
   updateUserAvatar,
   updateUsername,
-  getFavorites,
-  addFavorite,
-  removeFavorite,
-  getRating,
-  saveRating,
-  getWatchHistory,
-  addWatchHistory,
-  getWatchHistoryItem,
-  getReview,
-  saveReview,
-  getReviews,
 } from '../controllers/userController.js';
 import { upload } from '../middleware/multer.js';
 import {
@@ -47,18 +36,4 @@ router.patch(
   updatePassword,
 );
 
-router.get('/profile/favorites', authenticate, getFavorites);
-router.post('/profile/favorites', authenticate, addFavorite);
-router.delete('/profile/favorites/:type/:id', authenticate, removeFavorite);
-
-router.post('/profile/ratings', authenticate, saveRating);
-router.get('/profile/ratings/:type/:id', authenticate, getRating);
-
-router.get('/profile/reviews/:type/:id', authenticate, getReview);
-router.get('/profile/reviews', authenticate, getReviews);
-router.post('/profile/reviews', authenticate, saveReview);
-
-router.get('/profile/history', authenticate, getWatchHistory);
-router.get('/profile/history/:type/:id', authenticate, getWatchHistoryItem);
-router.post('/profile/history', authenticate, addWatchHistory);
 export default router;

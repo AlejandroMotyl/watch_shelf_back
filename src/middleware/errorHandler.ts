@@ -3,11 +3,17 @@ import type { ErrorRequestHandler } from 'express';
 import { HttpError } from 'http-errors';
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
-  console.error(err);
-
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   if (axios.isAxiosError(err)) {
+    console.error('Axios request failed:', {
+      method: err.config?.method?.toUpperCase(),
+      url: err.config?.url,
+      status: err.response?.status,
+      data: err.response?.data,
+      code: err.code,
+    });
+
     if (err.response) {
       const status = err.response.status;
 
@@ -42,10 +48,22 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   }
 
   if (err instanceof HttpError) {
+    console.error('HTTP error:', {
+      method: req.method,
+      path: req.originalUrl,
+      status: err.status,
+      message: err.message,
+    });
     return res.status(err.status).json({
       message: err.message || err.name,
     });
   }
+
+  console.error('Unexpected error:', {
+    method: req.method,
+    path: req.originalUrl,
+    error: err instanceof Error ? err.message : err,
+  });
 
   return res.status(500).json({
     message: isDevelopment
