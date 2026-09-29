@@ -1,14 +1,14 @@
 import type { Request, Response } from 'express';
 import argon2 from 'argon2';
 import { pool } from '../config/db.js';
-import createHttpError from 'http-errors';
+import createHttpError, { HttpError } from 'http-errors';
 import {
   createSession,
   deleteSession,
+  refreshSession,
   setSessionCookies,
 } from '../services/auth.js';
 import type { User } from '../types/user.js';
-import type { PoolClient } from 'pg';
 
 export const registerUser = async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
@@ -112,37 +112,8 @@ export const refreshUserSession = async (req: Request, res: Response) => {
     throw createHttpError(401, 'Missing session credentials');
   }
 
-  const client: PoolClient = await pool.connect();
-
   try {
-    await client.query('BEGIN');
-
-    const result = await client.query(
-      `
-        DELETE FROM sessions
-        WHERE id = $1
-          AND refresh_token = $2
-          AND refresh_token_valid_until > NOW()
-        RETURNING user_id
-      `,
-      [sessionId, refreshToken],
-    );
-
-    if (result.rowCount !== 1) {
-      await client.query('ROLLBACK');
-
-      res.clearCookie('sessionId');
-      res.clearCookie('accessToken');
-      res.clearCookie('refreshToken');
-
-      throw createHttpError(401, 'Invalid or expired session');
-    }
-
-    const userId = result.rows[0].user_id;
-
-    const newSession = await createSession(userId, client);
-
-    await client.query('COMMIT');
+    const newSession = await refreshSession(sessionId, refreshToken);
 
     setSessionCookies(res, newSession);
 
@@ -150,12 +121,12 @@ export const refreshUserSession = async (req: Request, res: Response) => {
       message: 'Session refreshed',
     });
   } catch (error) {
-    try {
-      await client.query('ROLLBACK');
-    } catch {}
+    if (error instanceof HttpError && error.status === 401) {
+      res.clearCookie('sessionId');
+      res.clearCookie('accessToken');
+      res.clearCookie('refreshToken');
+    }
 
     throw error;
-  } finally {
-    client.release();
   }
 };
