@@ -79,32 +79,6 @@ export const refreshSession = async (
   try {
     await client.query('BEGIN');
 
-    const debug = await client.query(
-      `
-        SELECT
-          id,
-          refresh_token,
-          refresh_token_valid_until,
-          refresh_token_valid_until > NOW() AS token_is_valid
-        FROM sessions
-        WHERE id = $1
-      `,
-      [sessionId],
-    );
-
-    console.log('REFRESH DEBUG:', {
-      sessionId,
-      found: debug.rowCount,
-      session: debug.rows[0]
-        ? {
-            id: debug.rows[0].id,
-            refreshTokenMatches: debug.rows[0].refresh_token === refreshToken,
-            tokenIsValid: debug.rows[0].token_is_valid,
-            validUntil: debug.rows[0].refresh_token_valid_until,
-          }
-        : null,
-    });
-
     const result = await client.query(
       `
         DELETE FROM sessions

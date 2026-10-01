@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import createHttpError from 'http-errors';
 import { pool } from '../config/db.js';
 import { tmdb } from './mediaControllers.js';
+import { logger } from '../middleware/logger.js';
 
 export const getFavorites = async (
   req: Request,
@@ -88,7 +89,7 @@ export const getFavorites = async (
       total_pages: Math.ceil(total / limit),
     });
   } catch (err) {
-    console.error('Fetching favorites failed:', err);
+    logger.error({ err }, 'Fetching favorites failed');
 
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
@@ -163,7 +164,7 @@ export const addFavorite = async (
       return;
     }
 
-    console.error('Adding favorite failed:', err);
+    logger.error({ err }, 'Adding favorite failed');
 
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
@@ -198,7 +199,7 @@ export const removeFavorite = async (
 
     res.status(204).send();
   } catch (err) {
-    console.error('Removing favorite failed:', err);
+    logger.error({ err }, 'Removing favorite failed');
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
 };

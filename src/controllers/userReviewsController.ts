@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import createHttpError from 'http-errors';
 import { pool } from '../config/db.js';
 import { tmdb } from './mediaControllers.js';
+import { logger } from '../middleware/logger.js';
 
 export const getReview = async (
   req: Request,
@@ -36,7 +37,7 @@ export const getReview = async (
       review: reviewData.rows[0] ?? null,
     });
   } catch (err) {
-    console.error('Fetching review failed:', err);
+    logger.error({ err }, 'Fetching review failed');
 
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
@@ -119,7 +120,7 @@ export const getReviews = async (
       total_pages: Math.ceil(total / limit),
     });
   } catch (err) {
-    console.error('Fetching reviews failed:', err);
+    logger.error({ err }, 'Fetching reviews failed');
 
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
@@ -213,7 +214,7 @@ export const saveReview = async (
       review: reviewData.rows[0],
     });
   } catch (err) {
-    console.error('Saving review failed:', err);
+    logger.error({ err }, 'Saving review failed');
 
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }

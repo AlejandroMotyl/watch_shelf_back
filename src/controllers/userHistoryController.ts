@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import createHttpError from 'http-errors';
 import { pool } from '../config/db.js';
 import { tmdb } from './mediaControllers.js';
+import { logger } from '../middleware/logger.js';
 
 export const getWatchHistory = async (
   req: Request,
@@ -61,7 +62,7 @@ export const getWatchHistory = async (
       total_pages: Math.ceil(total / limit),
     });
   } catch (err) {
-    console.error('Fetching watch history failed:', err);
+    logger.error({ err }, 'Fetching watch history failed');
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
 };
@@ -103,7 +104,7 @@ export const getWatchHistoryItem = async (
       history: historyData.rows[0] ?? null,
     });
   } catch (err) {
-    console.error('Fetching watch history item failed:', err);
+    logger.error({ err }, 'Fetching watch history item failed');
 
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
@@ -152,7 +153,7 @@ export const addWatchHistory = async (
     );
     res.status(200).json({ history: historyData.rows[0] });
   } catch (err) {
-    console.error('Saving watch history failed:', err);
+    logger.error({ err }, 'Saving watch history failed');
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
 };

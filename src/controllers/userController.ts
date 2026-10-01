@@ -9,6 +9,7 @@ import argon2 from 'argon2';
 import { createSession, setSessionCookies } from '../services/auth.js';
 import sharp from 'sharp';
 import { fileTypeFromBuffer } from 'file-type';
+import { logger } from '../middleware/logger.js';
 
 export const getCurrentUser = async (
   req: Request,
@@ -116,7 +117,7 @@ export const updateUserAvatar = async (
       try {
         await deleteFileFromCloudinary(oldAvatarPublicId);
       } catch (deleteError) {
-        console.error('Failed to delete previous avatar:', deleteError);
+        logger.error({ deleteError }, 'Failed to delete previous avatar');
       }
     }
 
@@ -124,7 +125,7 @@ export const updateUserAvatar = async (
       user: userData.rows[0],
     });
   } catch (err) {
-    console.error('updateUserAvatar failed:', err);
+    logger.error({ err }, 'updateUserAvatar failed:');
 
     return next(
       err instanceof Error ? err : new Error('Failed to update avatar'),
@@ -146,12 +147,23 @@ export const updateUsername = async (
         WHERE id = $2
         RETURNING id, username, email, avatar_url, created_at
       `,
-      [username, req.user!.id],
+      [username, req.user.id],
     );
 
     res.status(200).json({ user: userData.rows[0] });
   } catch (err) {
-    console.error('updateUsername failed:', err);
+    if (
+      err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      err.code === '23505'
+    ) {
+      if ('constraint' in err && err.constraint === 'users_username_key') {
+        throw createHttpError(409, 'Username already taken');
+      }
+    }
+
+    logger.error({ err }, 'updateUsername failed');
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
 };
@@ -216,7 +228,7 @@ export const updatePassword = async (
       message: 'Password updated successfully',
     });
   } catch (err) {
-    console.error('updatePassword failed:', err);
+    logger.error({ err }, 'updatePassword failed');
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
 };

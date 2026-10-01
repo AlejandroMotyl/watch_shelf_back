@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import createHttpError from 'http-errors';
 import { pool } from '../config/db.js';
+import { logger } from '../middleware/logger.js';
 
 export const getRating = async (
   req: Request,
@@ -25,7 +26,7 @@ export const getRating = async (
     }
     res.status(200).json({ rating: ratingData.rows[0] });
   } catch (err) {
-    console.error('Fetching rating failed:', err);
+    logger.error({ err }, 'Fetching rating failed');
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
 };
@@ -51,7 +52,7 @@ export const saveRating = async (
     );
     res.status(200).json({ rating: ratingData.rows[0] });
   } catch (err) {
-    console.error('Saving rating failed:', err);
+    logger.error({ err }, 'Saving rating failed');
     next(err instanceof Error ? err : new Error(JSON.stringify(err)));
   }
 };

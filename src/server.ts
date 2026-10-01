@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
-import { httpLogger } from './middleware/logger.js';
+import { httpLogger, logger } from './middleware/logger.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import mediaRoutes from './routes/mediaRoutes.js';
@@ -13,6 +13,7 @@ import userHistoryRoutes from './routes/userHistoryRoutes.js';
 import userFavoritesRoutes from './routes/userFavoritesRoutes.js';
 import { errors } from 'celebrate';
 import cookieParser from 'cookie-parser';
+import { pool } from './config/db.js';
 const app = express();
 const PORT = process.env.PORT ?? 4000;
 
@@ -37,6 +38,21 @@ app.use(notFoundHandler);
 app.use(errors());
 app.use(errorHandler);
 // ? Server listen
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+  logger.info(`Server running on http://localhost:${PORT}`);
 });
+
+const shutdown = async () => {
+  try {
+    await pool.end();
+    server.close(() => {
+      process.exit(0);
+    });
+  } catch (error) {
+    logger.error({ error }, 'Failed to shut down server');
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
