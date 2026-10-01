@@ -55,7 +55,6 @@ export const getReviews = async (
     const page = Math.max(Number(req.query.page) || 1, 1);
 
     const requestedLimit = Number(req.query.limit) || 12;
-
     const limit = Math.min(Math.max(requestedLimit, 1), 50);
 
     const offset = (page - 1) * limit;
@@ -63,19 +62,38 @@ export const getReviews = async (
     const reviewsData = await pool.query(
       `
         SELECT
-          id,
-          tmdb_id,
-          media_type,
-          review_content,
-          title,
-          poster_path,
-          release_date,
-          genres,
-          created_at,
-          updated_at
-        FROM reviews
-        WHERE user_id = $1
-        ORDER BY updated_at DESC
+          r.id,
+          r.tmdb_id,
+          r.media_type,
+          r.review_content,
+          r.title,
+          r.poster_path,
+          r.release_date,
+          r.genres,
+          r.created_at,
+          r.updated_at,
+
+          rt.rating,
+
+          EXISTS (
+            SELECT 1
+            FROM favorites f
+            WHERE f.user_id = r.user_id
+              AND f.tmdb_id = r.tmdb_id
+              AND f.media_type = r.media_type
+          ) AS is_favorite
+
+        FROM reviews r
+
+        LEFT JOIN ratings rt
+          ON rt.user_id = r.user_id
+          AND rt.tmdb_id = r.tmdb_id
+          AND rt.media_type = r.media_type
+
+        WHERE r.user_id = $1
+
+        ORDER BY r.updated_at DESC
+
         LIMIT $2
         OFFSET $3
       `,
