@@ -16,6 +16,6 @@ export const logger = pino({
 
 export const httpLogger = pinoHttp({
   logger,
-  customSuccessMessage: (req, res) =>
-    `${req.method} ${req.url} ${res.statusCode}`,
+  customSuccessMessage: (req, res, responseTime) =>
+    `${req.method} ${req.url} ${res.statusCode} - ${responseTime}ms`,
 });
